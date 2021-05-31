@@ -656,6 +656,15 @@ class HullWhite:
         fsr = (self.curve.bond(T)-self.curve.bond(S))/(tau*sum(list(map(lambda x:self.curve.bond(x), np.arange(T,S,tau)+tau))))
         return fsr
 
+    def _theta(self, t):
+        #TODO : 구현 필요
+        pass
+
+    def sample(self, time, num, random_seed=None):
+        #TODO : 구현 필요
+        pass
+        
+
     def calibrate(self, tenor, black_vol):
         def obj_fun(param):
             alpha, sigma = param
