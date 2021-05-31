@@ -94,10 +94,10 @@ class SmithWilson:
 
             >>> X_train = data[:, 0]
             >>> y_train = data[:, 1]
-            >>> ufr = 0.045
+            >>> ltfr = 0.045
             >>> terminal = 60
 
-            >>> sw = SmithWilson(np.log(1+ufr), terminal)
+            >>> sw = SmithWilson(np.log(1+ltfr), terminal)
             >>> sw.train(X_train, y_train)
 
             >>> maturity = np.linspace(0, 100, 1201)
@@ -106,13 +106,13 @@ class SmithWilson:
             >>> forward_rate = sw.forward(maturity)
     """
     
-    def __init__(self, ufr, terminal):
-        self.ufr = ufr
-        self.terminal = terminal
+    def __init__(self, ltfr, terminal):
+        self.ltfr = ltfr
+        self.terminal = 60
     
     def train(self, X, y):
         m = 1/(1+y)**X
-        mu = np.exp(-self.ufr*X)
+        mu = np.exp(-self.ltfr*X)
         n = len(X)
         
         def obj_fun(alpha):
@@ -120,10 +120,10 @@ class SmithWilson:
             zeta = (m-mu)@np.linalg.inv(W)
             W_T = self._wilson(self.terminal, X, alpha)
             derivW_T = self._wilson(self.terminal, X, alpha, order=1)
-            bond0_T = np.exp(-self.ufr*self.terminal) + W_T@zeta
-            bond1_T = -self.ufr*np.exp(-self.ufr*self.terminal)+derivW_T@zeta
+            bond0_T = np.exp(-self.ltfr*self.terminal) + W_T@zeta
+            bond1_T = -self.ltfr*np.exp(-self.ltfr*self.terminal)+derivW_T@zeta
             forward_T = -bond1_T/bond0_T
-            error = abs(self.ufr-1e-4-forward_T)
+            error = abs(self.ltfr-1e-4-forward_T)
             return error
         
         res = minimize_scalar(obj_fun, method='bounded', bounds=(1e-4,1), options={'disp':False})
@@ -133,36 +133,57 @@ class SmithWilson:
         self._u = X.copy()
         
     def bond(self, t, order=0):
-        bond = (-self.ufr)**order*np.exp(-self.ufr*t)+self._wilson(t[:, None], self._u, self._alpha, order)@self._zeta
-        return bond
+        if type(t) != np.ndarray:
+            t = np.array([t])
+            bond = (-self.ltfr)**order*np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha, order)@self._zeta
+            return bond[0]
+        else:
+            bond = (-self.ltfr)**order*np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha, order)@self._zeta
+            return bond
         
     def spot(self, t):
-        t = np.fmax(t, 1e-6)
-        P = np.exp(-self.ufr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
-        return (1/P)**(1/t) - 1
+        if type(t) != np.ndarray:
+            t = np.fmax(np.array([t]), 1e-6)
+            P = np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
+            return ((1/P)**(1/t) - 1)[0]
+        else:
+            t = np.fmax(t, 1e-6)
+            P = np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
+            return (1/P)**(1/t) - 1
     
     def forward(self, t, order=0):
-        if order==0:
-            forward = -self.bond(t, 1)/self.bond(t, 0)
-        elif order==1:
-            forward = 1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+        if type(t) != np.ndarray:
+            t = np.array([t])
+            if order==0:
+                forward = -self.bond(t, 1)/self.bond(t, 0)
+            elif order==1:
+                forward = 1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+            else:
+                print('유효한 Order가 아닙니다.')
+                return None
+            return (np.exp(forward)-1)[0]
         else:
-            print('유효한 Order가 아닙니다.')
-            return None
-        return np.exp(forward)-1
+            if order==0:
+                forward = -self.bond(t, 1)/self.bond(t, 0)
+            elif order==1:
+                forward = 1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+            else:
+                print('유효한 Order가 아닙니다.')
+                return None
+            return np.exp(forward)-1
     
     def forward1M(self, t):
         return (self.bond(t)/self.bond(t+1/12))**12-1
     
     def _wilson(self, t, u, alpha, order=0):
         if order == 0:
-            W = np.exp(-self.ufr*(t+u))*(alpha*np.fmin(t,u) - np.exp(-alpha*np.fmax(t,u))*np.sinh(alpha*np.fmin(t,u)))
+            W = np.exp(-self.ltfr*(t+u))*(alpha*np.fmin(t,u) - np.exp(-alpha*np.fmax(t,u))*np.sinh(alpha*np.fmin(t,u)))
         elif order == 1:
-            W = np.where(t < u, np.exp(-self.ufr*t-(alpha+self.ufr)*u)*(self.ufr*np.sinh(alpha*t)-alpha*np.cosh(alpha*t)-alpha*(self.ufr*t-1)*np.exp(alpha*u)), \
-                    np.exp(-self.ufr*u-(alpha+self.ufr)*t)*((alpha+self.ufr)*np.sinh(alpha*u)-alpha*self.ufr*u*np.exp(alpha*t)))
+            W = np.where(t < u, np.exp(-self.ltfr*t-(alpha+self.ltfr)*u)*(self.ltfr*np.sinh(alpha*t)-alpha*np.cosh(alpha*t)-alpha*(self.ltfr*t-1)*np.exp(alpha*u)), \
+                    np.exp(-self.ltfr*u-(alpha+self.ltfr)*t)*((alpha+self.ltfr)*np.sinh(alpha*u)-alpha*self.ltfr*u*np.exp(alpha*t)))
         elif order == 2:
-            W = np.where(t < u, np.exp(-self.ufr*t-(alpha+self.ufr)*u)*(-(alpha**2+self.ufr**2)*np.sinh(alpha*t)+2*alpha*self.ufr*np.cosh(alpha*t)+alpha*self.ufr*(self.ufr*t-2)*np.exp(alpha*u)), \
-                    np.exp(-self.ufr*u-(alpha+self.ufr)*t)*(alpha*self.ufr**2*u*np.exp(alpha*t)-(alpha+self.ufr)**2*np.sinh(alpha*u)))
+            W = np.where(t < u, np.exp(-self.ltfr*t-(alpha+self.ltfr)*u)*(-(alpha**2+self.ltfr**2)*np.sinh(alpha*t)+2*alpha*self.ltfr*np.cosh(alpha*t)+alpha*self.ltfr*(self.ltfr*t-2)*np.exp(alpha*u)), \
+                    np.exp(-self.ltfr*u-(alpha+self.ltfr)*t)*(alpha*self.ltfr**2*u*np.exp(alpha*t)-(alpha+self.ltfr)**2*np.sinh(alpha*u)))
         else:
             print('유효한 Order가 아닙니다.')
             return None
@@ -579,54 +600,75 @@ class DynamicNelsonSiegel:
         return mean_reversion, level1, level2, twist1, twist2
 
     
-    class HullWhite:
+class HullWhite:
     
     def __init__(self, curve, alpha, sigma):
         self.curve = curve
         self.alpha = alpha
         self.sigma = sigma
     
-    def Sigma(self,T,S):
+    def _sigma_p(self, T, S):
         alpha = self.alpha
         sigma = self.sigma
         sigma_p = (np.exp(-alpha*T)-np.exp(-alpha*S))*(sigma/alpha)*np.sqrt((np.exp(2*alpha*T)-1)/(2*alpha))
         return sigma_p
     
-    def __fSwapCashFlow(self,T,S,tau=0.25):
-        cf = self.curve.fSwapRate(T,S,tau)*np.ones(int((S-T)/tau))*tau
+    def _forward_swap_cash_flow(self, T, S, tau=0.25):
+        cf = self._forward_swap_rate(T,S,tau)*np.ones(int((S-T)/tau))*tau
         cf[-1] += 1
         return cf
     
-    def Jamshidian(self,T,S,tau=0.25):
-        c = self.__fSwapCashFlow(T,S,tau)
-        obj = lambda r: abs(np.sum(c*np.array(list(map(lambda x: self.Bond(T,x,r), np.arange(T,S,tau)+tau))))-1)
-        res = minimize_scalar(obj, method='bounded', bounds=(1e-10,1), options={'xtol':1e-9,'disp':False})
+    def _jamshidian_trick(self, T, S, tau=0.25):
+        c = self._forward_swap_cash_flow(T,S,tau)
+        obj = lambda r: abs(np.sum(c*np.array(list(map(lambda x: self.bond(T,x,r), np.arange(T,S,tau)+tau))))-1)
+        res = minimize_scalar(obj, method='bounded', bounds=(1e-10,1), options={'disp':False})
         return res.x
         
-    def A(self,t,T):
+    def _a(self, t, T):
         alpha = self.alpha 
         sigma = self.sigma
-        a = self.curve.Bond(T)/self.curve.Bond(t)*np.exp(self.B(t,T)*self.curve.Forward(t)-sigma**2*((np.exp(-alpha*T)-np.exp(-alpha*t))**2*(np.exp(2*alpha*t)-1))/(4*alpha**3))
+        a = self.curve.bond(T)/self.curve.bond(t)*np.exp(self._b(t,T)*self.curve.forward(t)-sigma**2*((np.exp(-alpha*T)-np.exp(-alpha*t))**2*(np.exp(2*alpha*t)-1))/(4*alpha**3))
         return a
     
-    def B(self,t,T):
+    def _b(self, t, T):
         b = (1-np.exp(-self.alpha*(T-t)))/self.alpha
         return b
     
-    def Bond(self,t,T,r):
-        bond = self.A(t,T)*np.exp(-self.B(t,T)*r)
-        return bond
+    def bond(self, t, T, r):
+        p = self._a(t,T)*np.exp(-self._b(t,T)*r)
+        return p
     
-    def rsHullWhiteATM(self, T, S, tau=0.25):
-        c = self.__fSwapCashFlow(T,S,tau)
-        r = self.Jamshidian(T,S,tau)
-        d_pos = lambda x: 1/self.Sigma(T,x)*np.log(self.Bond(0,x,r)/self.Bond(0,T,r)/self.Bond(T,x,r)) + self.Sigma(T,x)/2
-        d_neg = lambda x: d_pos(x) - self.Sigma(T,x)
-        f = lambda x: self.Bond(0,x,r)*norm.cdf(d_pos(x))-self.Bond(T,x,r)*self.Bond(0,T,r)*norm.cdf(d_neg(x))
+    def _rs_hullwhite_atm(self, T, S, tau=0.25):
+        c = self._forward_swap_cash_flow(T,S,tau)
+        r = self._jamshidian_trick(T,S,tau)
+        d_pos = lambda x: 1/self._sigma_p(T,x)*np.log(self.bond(0,x,r)/self.bond(0,T,r)/self.bond(T,x,r)) + self._sigma_p(T,x)/2
+        d_neg = lambda x: d_pos(x) - self._sigma_p(T,x)
+        f = lambda x: self.bond(0,x,r)*norm.cdf(d_pos(x))-self.bond(T,x,r)*self.bond(0,T,r)*norm.cdf(d_neg(x))
         rs = sum(c*list(map(f, np.arange(T,S,tau)+tau)))
         return rs
-    
-    def fSwapCashFlow(self,T,S,tau=0.25):
-        cf = self.curve.fSwapRate(T,S,tau)*np.ones(int((S-T)/tau))*tau
-        cf[-1] += 1
-        return cf
+
+    def _rs_black_atm(self, sigma, T, S):
+        d1 = 0.5*sigma*np.sqrt(T)
+        rs = (self.curve.bond(T)-self.curve.bond(S))*(2*norm.cdf(d1)-1)
+        return rs
+
+    def _forward_swap_rate(self, T, S, tau=0.25):
+        fsr = (self.curve.bond(T)-self.curve.bond(S))/(tau*sum(list(map(lambda x:self.curve.bond(x), np.arange(T,S,tau)+tau))))
+        return fsr
+
+    def calibrate(self, tenor, black_vol):
+        def obj_fun(param):
+            alpha, sigma = param
+            hw = HullWhite(self.curve, alpha, sigma)
+            n = len(tenor)
+            rs_price_black = rs_price_hw = np.ones([n, n])
+            for i in range(n):
+                for j in range(n):
+                    rs_price_hw = hw._rs_hullwhite_atm(tenor[i], tenor[i]+tenor[j])
+                    rs_price_black = hw._rs_black_atm(black_vol[i][j], tenor[i], tenor[i]+tenor[j])
+            y = np.sqrt(np.sum(((rs_price_black-rs_price_hw)/rs_price_black)**2))
+            print(f'α={alpha:.10f}, σ={sigma:.10f}, f(α, σ)={y:.10f}')
+            return y
+
+        res = minimize(obj_fun, np.array([self.alpha, self.sigma]), method='nelder-mead', options={'disp':True})
+        return res.x
