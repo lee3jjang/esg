@@ -157,20 +157,22 @@ class SmithWilson:
             if order==0:
                 forward = -self.bond(t, 1)/self.bond(t, 0)
             elif order==1:
-                forward = 1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+                forward = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
             else:
                 print('유효한 Order가 아닙니다.')
                 return None
-            return (np.exp(forward)-1)[0]
+            # return (np.exp(forward)-1)[0]
+            return forward
         else:
             if order==0:
                 forward = -self.bond(t, 1)/self.bond(t, 0)
             elif order==1:
-                forward = 1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+                forward = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
             else:
                 print('유효한 Order가 아닙니다.')
                 return None
-            return np.exp(forward)-1
+            # return np.exp(forward)-1
+            return forward
     
     def forward1M(self, t):
         return (self.bond(t)/self.bond(t+1/12))**12-1
