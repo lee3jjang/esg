@@ -613,7 +613,7 @@ class HullWhite:
 
     def alpha(self, t: float) -> float:
         if t<0: raise Exception("t 입력 오류")
-        elif t<=20: value = self.SIGMA1
+        elif t<=20: value = self.ALPHA1
         else: value = self.ALPHA2
         return value
 
@@ -631,8 +631,8 @@ class HullWhite:
 
     def E(self, t: float) -> float:
         if t<0: raise Exception("t 입력 오류")
-        elif t<=20: integral = self.SIGMA1*t 
-        else: integral = self.SIGMA1*20+self.ALPHA2*(t-20)
+        elif t<=20: integral = self.ALPHA1*t 
+        else: integral = self.ALPHA1*20+self.ALPHA2*(t-20)
         value = np.exp(integral)
         return value
 
@@ -640,9 +640,9 @@ class HullWhite:
         if t<0 or T<t:
             raise Exception('(t, T) 입력 오류')
         elif t<=20 and T<=20:
-            value = 1/self.SIGMA1*(1-np.exp(-self.SIGMA1*(T-t)))
+            value = 1/self.ALPHA1*(1-np.exp(-self.ALPHA1*(T-t)))
         elif t<=20 and T>20:
-            value = 1/self.SIGMA1*(1-np.exp(-self.SIGMA1*(20-t)))+1/self.ALPHA2*(np.exp(-self.ALPHA2*20)-np.exp(-self.ALPHA2*T))*np.exp(self.SIGMA1*t)
+            value = 1/self.ALPHA1*(1-np.exp(-self.ALPHA1*(20-t)))+1/self.ALPHA2*(np.exp(-self.ALPHA2*20)-np.exp(-self.ALPHA2*T))*np.exp(self.ALPHA1*t)
         elif t>20 and T>20:
             value = 1/self.ALPHA2*(1-np.exp(-self.ALPHA2*(T-t)))
         return value
@@ -650,7 +650,7 @@ class HullWhite:
     def theta(self, t: float) -> float:
         value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t)+0.5*(self.deriv_V_0t(t, 2)+self.alpha(t)*self.deriv_V_0t(t, 1))
         return value
-
+    
     def deriv_V_0t(self, t: float, order: int) -> float:
         if order == 1:
             return 2/self.E(t)*quad(lambda u: self.sigma(u)**2*self.E(u)*self.B(u, t), 0, t, limit=200)[0]
