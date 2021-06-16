@@ -1,4 +1,6 @@
 import numpy as np
+from typing import List
+from scipy.integrate import quad
 from scipy.optimize import minimize_scalar, minimize
 from scipy.stats import norm, multivariate_normal
 
@@ -604,82 +606,65 @@ class DynamicNelsonSiegel:
     
 class HullWhite:
     
-    def __init__(self, curve, alpha, sigma):
+    def __init__(self, curve: SmithWilson, alpha: List[float], sigma: List[float]):
         self.curve = curve
-        self.alpha = alpha
-        self.sigma = sigma
-    
-    def _sigma_p(self, T, S):
-        alpha = self.alpha
-        sigma = self.sigma
-        sigma_p = (np.exp(-alpha*T)-np.exp(-alpha*S))*(sigma/alpha)*np.sqrt((np.exp(2*alpha*T)-1)/(2*alpha))
-        return sigma_p
-    
-    def _forward_swap_cash_flow(self, T, S, tau=0.25):
-        cf = self._forward_swap_rate(T,S,tau)*np.ones(int((S-T)/tau))*tau
-        cf[-1] += 1
-        return cf
-    
-    def _jamshidian_trick(self, T, S, tau=0.25):
-        c = self._forward_swap_cash_flow(T,S,tau)
-        obj = lambda r: abs(np.sum(c*np.array(list(map(lambda x: self.bond(T,x,r), np.arange(T,S,tau)+tau))))-1)
-        res = minimize_scalar(obj, method='bounded', bounds=(1e-10,1), options={'disp':False})
-        return res.x
-        
-    def _a(self, t, T):
-        alpha = self.alpha 
-        sigma = self.sigma
-        a = self.curve.bond(T)/self.curve.bond(t)*np.exp(self._b(t,T)*self.curve.forward(t)-sigma**2*((np.exp(-alpha*T)-np.exp(-alpha*t))**2*(np.exp(2*alpha*t)-1))/(4*alpha**3))
-        return a
-    
-    def _b(self, t, T):
-        b = (1-np.exp(-self.alpha*(T-t)))/self.alpha
-        return b
-    
-    def bond(self, t, T, r):
-        p = self._a(t,T)*np.exp(-self._b(t,T)*r)
-        return p
-    
-    def _rs_hullwhite_atm(self, T, S, tau=0.25):
-        c = self._forward_swap_cash_flow(T,S,tau)
-        r = self._jamshidian_trick(T,S,tau)
-        d_pos = lambda x: 1/self._sigma_p(T,x)*np.log(self.bond(0,x,r)/self.bond(0,T,r)/self.bond(T,x,r)) + self._sigma_p(T,x)/2
-        d_neg = lambda x: d_pos(x) - self._sigma_p(T,x)
-        f = lambda x: self.bond(0,x,r)*norm.cdf(d_pos(x))-self.bond(T,x,r)*self.bond(0,T,r)*norm.cdf(d_neg(x))
-        rs = sum(c*list(map(f, np.arange(T,S,tau)+tau)))
-        return rs
+        self.ALPHA1, self.ALPHA2 = alpha
+        self.SIGMA1, self.SIGMA2, self.SIGMA3, self.SIGMA4, self.SIGMA5, self.SIGMA6, self.SIGMA7 = sigma
 
-    def _rs_black_atm(self, sigma, T, S):
-        d1 = 0.5*sigma*np.sqrt(T)
-        rs = (self.curve.bond(T)-self.curve.bond(S))*(2*norm.cdf(d1)-1)
-        return rs
+    def alpha(self, t: float) -> float:
+        if t<0: raise Exception("t 입력 오류")
+        elif t<=20: value = self.SIGMA1
+        else: value = self.ALPHA2
+        return value
 
-    def _forward_swap_rate(self, T, S, tau=0.25):
-        fsr = (self.curve.bond(T)-self.curve.bond(S))/(tau*sum(list(map(lambda x:self.curve.bond(x), np.arange(T,S,tau)+tau))))
-        return fsr
+    def sigma(self, t: float) -> float:
+        if t<0: raise Exception("t 입력 오류")
+        elif t<=1: value = self.SIGMA1
+        elif t<=2: value = self.SIGMA2
+        elif t<=3: value = self.SIGMA3
+        elif t<=5: value = self.SIGMA4
+        elif t<=7: value = self.SIGMA5
+        elif t<=10: value = self.SIGMA6
+        else: value = self.SIGMA7
+        return value
+#         return 0
 
-    def _theta(self, t):
-        #TODO : 구현 필요
-        pass
+    def E(self, t: float) -> float:
+        if t<0: raise Exception("t 입력 오류")
+        elif t<=20: integral = self.SIGMA1*t 
+        else: integral = self.SIGMA1*20+self.ALPHA2*(t-20)
+        value = np.exp(integral)
+        return value
 
-    def sample(self, time, num, random_seed=None):
-        #TODO : 구현 필요
-        pass
-        
+    def B(self, t: float, T: float) -> float:
+        if t<0 or T<t:
+            raise Exception('(t, T) 입력 오류')
+        elif t<=20 and T<=20:
+            value = 1/self.SIGMA1*(1-np.exp(-self.SIGMA1*(T-t)))
+        elif t<=20 and T>20:
+            value = 1/self.SIGMA1*(1-np.exp(-self.SIGMA1*(20-t)))+1/self.ALPHA2*(np.exp(-self.ALPHA2*20)-np.exp(-self.ALPHA2*T))*np.exp(self.SIGMA1*t)
+        elif t>20 and T>20:
+            value = 1/self.ALPHA2*(1-np.exp(-self.ALPHA2*(T-t)))
+        return value
 
-    def calibrate(self, tenor, black_vol):
-        def obj_fun(param):
-            alpha, sigma = param
-            hw = HullWhite(self.curve, alpha, sigma)
-            n = len(tenor)
-            rs_price_black = rs_price_hw = np.ones([n, n])
-            for i in range(n):
-                for j in range(n):
-                    rs_price_hw = hw._rs_hullwhite_atm(tenor[i], tenor[i]+tenor[j])
-                    rs_price_black = hw._rs_black_atm(black_vol[i][j], tenor[i], tenor[i]+tenor[j])
-            y = np.sqrt(np.sum(((rs_price_black-rs_price_hw)/rs_price_black)**2))
-            print(f'α={alpha:.10f}, σ={sigma:.10f}, f(α, σ)={y:.10f}')
-            return y
+    def theta(self, t: float) -> float:
+        value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t)+0.5*(self.deriv_V_0t(t, 2)+self.alpha(t)*self.deriv_V_0t(t, 1))
+        return value
 
-        res = minimize(obj_fun, np.array([self.alpha, self.sigma]), method='nelder-mead', options={'disp':True})
-        return res.x
+    def deriv_V_0t(self, t: float, order: int) -> float:
+        if order == 1:
+            return 2/self.E(t)*quad(lambda u: self.sigma(u)**2*self.E(u)*self.B(u, t), 0, t, limit=200)[0]
+        elif order == 2:
+            return quad(lambda u: self.sigma(u)**2*self.E(u)/self.E(t)*(-self.alpha(t)*self.B(u, t)+self.E(u)/self.E(t)), 0, t, limit=200)[0]
+        else:
+            raise Exception("order 입력 오류")
+
+    def generate_scenario(self, t: float, n: int, dt: float = 1/12):
+        m = int(t/dt)
+        r = np.zeros([m+1, n])
+        r[0] = self.curve.forward(0)
+        dW = np.random.normal(0, np.sqrt(dt), size=(m, n))
+        t = np.arange(0, t+dt, dt)
+        for i in range(m):
+            r[i+1] = r[i] + (self.theta(t[i])-self.alpha(t[i])*r[i])*dt + self.sigma(t[i])*dW[i]
+        return r
