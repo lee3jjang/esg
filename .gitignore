@@ -1,5 +1,5 @@
 .vscode
-*.csv
 __pycache__
 .ipynb_checkpoints
-.scenario.csv
+*.csv
+*.png
