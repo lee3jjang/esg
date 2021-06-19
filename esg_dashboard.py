@@ -62,13 +62,34 @@ def main():
         sw.train(X_train, y_train)
         t = np.arange(0, 120+1e-8, 1/12)
         spot = sw.spot(t)
+        forward = sw.forward(t)
 
+        # 시각화
         fig = make_subplots(rows=1, cols=1, shared_xaxes=False)
+
+        ## 현물(연복리)
+        fig.add_trace(go.Scatter(
+            x=X_train, y=y_train,
+            marker=dict(color='black', symbol='x', size=10),
+            name='관측값',
+            mode='markers',
+            showlegend=False,
+        ))
+        
         fig.add_trace(go.Scatter(
             x=t, y=spot,
             line=dict(width=2, color='#009473'),
             name='현물(연복리)',
         ))
+
+        ## 1개월선도(연복리)
+        fig.add_trace(go.Scatter(
+            x=t, y=forward,
+            line=dict(width=2, color='#dd4124'),
+            name='1개월선도(연복리)',
+        ))
+
+        fig.add_hline(y=0.052, line=dict(width=2, color='black', dash='dash'))
 
         fig.update_xaxes(
             title=dict(text='<b>만기(년)</b>', font_color='#323232', font_size=18, standoff=0),
@@ -79,14 +100,15 @@ def main():
             showline=True, linecolor='#323232', linewidth=2,
             zeroline=False, #zerolinewidth=2, zerolinecolor='black',
             showgrid=False, #gridcolor='black', gridwidth=1,
+            range=[0, 120],
         )
 
         fig.update_yaxes(
             title=dict(text=r'<b>금리</b>', font_color='#323232', font_size=18, standoff=0),
             tickfont=dict(size=15, family='Malgun Gothic', color='#323232'),
-            tickformat='.1f',
-            dtick=0.5,
-            showline=False, #linecolor='#323232', linewidth=2,
+            tickformat=',.1%',
+            dtick=0.01,
+            showline=True, linecolor='#323232', linewidth=2,
             zeroline=False, #zerolinewidth=2, zerolinecolor='black',
             showgrid=False, #gridcolor='black', gridwidth=1,
         )
@@ -100,11 +122,12 @@ def main():
             font_color='black',
             plot_bgcolor='#fcfcfc',
             paper_bgcolor='#fcfcfc',
-            legend_title='<b>구분</b>',
+            # legend_title='<b>구분</b>',
             legend_title_font_size=17,
             legend_font_size=15,
             # hovermode='x unified',
             showlegend=True,
+            legend=dict(x=0.7, y=0.2),
             hoverlabel_align='left',
         )
 
