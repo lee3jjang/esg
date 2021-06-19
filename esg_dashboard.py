@@ -80,14 +80,14 @@ def main():
         fig.add_trace(go.Scatter(
             x=t, y=spot,
             line=dict(width=2, color='#009473'),
-            name='현물(연복리)',
+            name=f'현물({compounding_kr})',
         ))
 
         ## 1개월선도(연복리)
         fig.add_trace(go.Scatter(
             x=t, y=forward,
             line=dict(width=2, color='#dd4124'),
-            name='1개월선도(연복리)',
+            name=f'{str(fwd_mat)+"개월" if fwd_mat != 0 else "순간":}선도({compounding_kr})',
         ))
 
         fig.add_hline(y=ltfr if compounding=='annually' else np.log(1+ltfr), line=dict(width=2, color='black', dash='dash'))
