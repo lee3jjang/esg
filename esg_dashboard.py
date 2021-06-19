@@ -58,7 +58,7 @@ def main():
         y_train = data[:, 1]
 
         # SW 모델 생성 및 α 학습
-        sw = SmithWilson(np.log(1+ltfr), cp)
+        sw = SmithWilson(np.log(1+ltfr), cp, tol)
         sw.train(X_train, y_train)
         t = np.arange(0, 100+1e-8, 1/12)
         spot = sw.spot(t)

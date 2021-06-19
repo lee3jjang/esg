@@ -108,9 +108,10 @@ class SmithWilson:
             >>> forward_rate = sw.forward(maturity)
     """
     
-    def __init__(self, ltfr, cp):
+    def __init__(self, ltfr, cp, tol=1e-4):
         self.ltfr = ltfr
         self.cp = cp
+        self.tol = tol
     
     def train(self, X, y):
         m = 1/(1+y)**X
@@ -125,7 +126,7 @@ class SmithWilson:
             bond0_T = np.exp(-self.ltfr*self.cp) + W_T@zeta
             bond1_T = -self.ltfr*np.exp(-self.ltfr*self.cp)+derivW_T@zeta
             forward_T = -bond1_T/bond0_T
-            error = abs(self.ltfr-1e-4-forward_T)
+            error = abs(self.ltfr-self.tol-forward_T)
             return error
         
         res = minimize_scalar(obj_fun, method='bounded', bounds=(1e-4,1), options={'disp':False})
