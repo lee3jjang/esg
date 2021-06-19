@@ -35,9 +35,10 @@ def main():
             pass
 
         st.subheader('**Ⅱ. 산출결과**')
-        compounding = st.selectbox('복리계산', ['연복리', '연속복리'])
-        if st.selectbox('현물/선도', ['현물', '선도']) == '선도':
-            st.slider('선도만기(월)', min_value=0, max_value=12, value=1, step=1)
+        compounding_kr = st.selectbox('복리계산', ['연복리', '연속복리'])
+        compounding = {'연복리': 'annually', '연속복리': 'continuously'}.get(compounding_kr)
+        # if st.selectbox('현물/선도', ['현물', '선도']) == '선도':
+        fwd_mat = st.slider('선도만기(월)', min_value=0, max_value=12, value=1, step=1)
 
         
         # 데이터 입력
@@ -61,15 +62,15 @@ def main():
         sw = SmithWilson(np.log(1+ltfr), cp, tol)
         sw.train(X_train, y_train)
         t = np.arange(0, 100+1e-8, 1/12)
-        spot = sw.spot(t)
-        forward1M = sw.forward1M(t)
+        spot = sw.spot(t, compounding=compounding)
+        forward = sw.forward(t, x=fwd_mat, compounding=compounding)
 
         # 시각화
         fig = make_subplots(rows=1, cols=1, shared_xaxes=False)
 
         ## 현물(연복리)
         fig.add_trace(go.Scatter(
-            x=X_train, y=y_train,
+            x=X_train, y=y_train if compounding=="annually" else np.log(1+y_train),
             marker=dict(color='black', symbol='x', size=10),
             name='관측값',
             mode='markers',
@@ -84,14 +85,15 @@ def main():
 
         ## 1개월선도(연복리)
         fig.add_trace(go.Scatter(
-            x=t, y=forward1M,
+            x=t, y=forward,
             line=dict(width=2, color='#dd4124'),
             name='1개월선도(연복리)',
         ))
 
-        fig.add_hline(y=ltfr, line=dict(width=2, color='black', dash='dash'))
+        fig.add_hline(y=ltfr if compounding=='annually' else np.log(1+ltfr), line=dict(width=2, color='black', dash='dash'))
+
         fig.add_annotation(
-            x=100, y=ltfr,
+            x=100, y=ltfr if compounding=='annually' else np.log(1+ltfr),
             text="<b>LTFR</b>",
             showarrow=False,
             yshift=1,
@@ -128,7 +130,7 @@ def main():
         )
 
         fig.update_layout(
-            title=dict(text='<b>금리기간구조                   2020.12.31</b>', font_size=20, font_color='#323232', xanchor='left', yanchor='top', x=0.43, y=0.97),
+            title=dict(text='<b>금리기간구조                      2020.12.31</b>', font_size=20, font_color='#323232', xanchor='left', yanchor='top', x=0.43, y=0.97),
             margin=dict(l=40, r=40, b=40, t=60),
             width=697,
             height=400,
@@ -146,7 +148,6 @@ def main():
         )
 
         st.plotly_chart(fig)
-
       
         
 

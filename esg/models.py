@@ -144,41 +144,58 @@ class SmithWilson:
             bond = (-self.ltfr)**order*np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha, order)@self._zeta
             return bond
         
-    def spot(self, t):
+    def spot(self, t, compounding='annually'):
         if type(t) != np.ndarray:
             t = np.fmax(np.array([t]), 1e-6)
             P = np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
-            return ((1/P)**(1/t) - 1)[0]
+            sp = ((1/P)**(1/t) - 1)[0]
         else:
             t = np.fmax(t, 1e-6)
             P = np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
-            return (1/P)**(1/t) - 1
-    
-    def forward(self, t, order=0):
-        if type(t) != np.ndarray:
-            t = np.array([t])
-            if order==0:
-                forward = -self.bond(t, 1)/self.bond(t, 0)
-            elif order==1:
-                forward = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
-            else:
-                print('유효한 Order가 아닙니다.')
-                return None
-            # return (np.exp(forward)-1)[0]
-            return forward
+            sp = (1/P)**(1/t) - 1
+        
+        if compounding=="continuously":
+            return np.log(1+sp)
+        elif compounding=="annually":
+            return sp
         else:
-            if order==0:
-                forward = -self.bond(t, 1)/self.bond(t, 0)
-            elif order==1:
-                forward = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
-            else:
-                print('유효한 Order가 아닙니다.')
-                return None
-            # return np.exp(forward)-1
-            return forward
+            raise Exception("compounding 입력 오류")
     
-    def forward1M(self, t):
-        return (self.bond(t)/self.bond(t+1/12))**12-1
+    def forward(self, t: float, order: int=0, x: int=0, compounding: str='continuously'):
+        if x==0:
+            if type(t) != np.ndarray:
+                t = np.array([t])
+                if order==0:
+                    fwd = -self.bond(t, 1)/self.bond(t, 0)
+                elif order==1:
+                    fwd = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+                else:
+                    raise Exception('order 입력 오류')
+            else:
+                if order==0:
+                    fwd = -self.bond(t, 1)/self.bond(t, 0)
+                elif order==1:
+                    fwd = -1/self.bond(t, 0)*(-self.bond(t, 1)**2/self.bond(t, 0)+self.bond(t, 2))
+                else:
+                    raise Exception('order 입력 오류')
+
+            if compounding=="continuously":
+                return fwd
+            elif compounding=="annually":
+                return np.exp(fwd)-1
+            else:
+                raise Exception("compounding 입력 오류")
+        elif x in range(1, 13):
+            fwd = (self.bond(t)/self.bond(t+x/12))**(12/x)-1
+
+            if compounding=="continuously":
+                return np.log(1+fwd)
+            elif compounding=="annually":
+                return fwd
+            else:
+                raise Exception("compounding 입력 오류")
+        else:
+            raise Exception('x 입력 오류')
     
     def _wilson(self, t, u, alpha, order=0):
         if order == 0:
@@ -190,8 +207,7 @@ class SmithWilson:
             W = np.where(t < u, np.exp(-self.ltfr*t-(alpha+self.ltfr)*u)*(-(alpha**2+self.ltfr**2)*np.sinh(alpha*t)+2*alpha*self.ltfr*np.cosh(alpha*t)+alpha*self.ltfr*(self.ltfr*t-2)*np.exp(alpha*u)), \
                     np.exp(-self.ltfr*u-(alpha+self.ltfr)*t)*(alpha*self.ltfr**2*u*np.exp(alpha*t)-(alpha+self.ltfr)**2*np.sinh(alpha*u)))
         else:
-            print('유효한 Order가 아닙니다.')
-            return None
+            raise Exception('order 입력 오류')
         return W
     
 
