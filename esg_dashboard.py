@@ -91,7 +91,7 @@ def main():
 
         fig.add_hline(y=ltfr, line=dict(width=2, color='black', dash='dash'))
         fig.add_annotation(
-            x=11, y=ltfr,
+            x=100, y=ltfr,
             text="<b>LTFR</b>",
             showarrow=False,
             yshift=1,
