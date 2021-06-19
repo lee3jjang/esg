@@ -55,14 +55,13 @@ def main():
 
         X_train = data[:, 0]
         y_train = data[:, 1]
-        ltfr, terminal = 0.052, 60
 
         # SW 모델 생성 및 α 학습
-        sw = SmithWilson(np.log(1+ltfr), terminal)
+        sw = SmithWilson(np.log(1+ltfr), cp)
         sw.train(X_train, y_train)
-        t = np.arange(0, 120+1e-8, 1/12)
+        t = np.arange(0, 100+1e-8, 1/12)
         spot = sw.spot(t)
-        forward = sw.forward(t)
+        forward1M = sw.forward1M(t)
 
         # 시각화
         fig = make_subplots(rows=1, cols=1, shared_xaxes=False)
@@ -84,12 +83,12 @@ def main():
 
         ## 1개월선도(연복리)
         fig.add_trace(go.Scatter(
-            x=t, y=forward,
+            x=t, y=forward1M,
             line=dict(width=2, color='#dd4124'),
             name='1개월선도(연복리)',
         ))
 
-        fig.add_hline(y=0.052, line=dict(width=2, color='black', dash='dash'))
+        fig.add_hline(y=ltfr, line=dict(width=2, color='black', dash='dash'))
 
         fig.update_xaxes(
             title=dict(text='<b>만기(년)</b>', font_color='#323232', font_size=18, standoff=0),
@@ -100,7 +99,7 @@ def main():
             showline=True, linecolor='#323232', linewidth=2,
             zeroline=False, #zerolinewidth=2, zerolinecolor='black',
             showgrid=False, #gridcolor='black', gridwidth=1,
-            range=[0, 120],
+            range=[0, 100],
         )
 
         fig.update_yaxes(
@@ -111,6 +110,7 @@ def main():
             showline=True, linecolor='#323232', linewidth=2,
             zeroline=False, #zerolinewidth=2, zerolinecolor='black',
             showgrid=False, #gridcolor='black', gridwidth=1,
+            # range=[0, 100],
         )
 
         fig.update_layout(
