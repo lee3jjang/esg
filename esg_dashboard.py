@@ -1,3 +1,4 @@
+from altair.vegalite.v4.schema.core import FontWeight
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
@@ -89,6 +90,19 @@ def main():
         ))
 
         fig.add_hline(y=ltfr, line=dict(width=2, color='black', dash='dash'))
+        fig.add_annotation(
+            x=11, y=ltfr,
+            text="<b>LTFR</b>",
+            showarrow=False,
+            yshift=1,
+            font_color='white',
+            font_size=15,
+            # bordercolor="black",
+            borderwidth=2,
+            borderpad=4,
+            bgcolor="#dd4124",
+            opacity=1,
+        )
 
         fig.update_xaxes(
             title=dict(text='<b>만기(년)</b>', font_color='#323232', font_size=18, standoff=0),
@@ -114,7 +128,7 @@ def main():
         )
 
         fig.update_layout(
-            title=dict(text='<b>금리기간구조</b>', font_size=20, font_color='#323232', xanchor='center', yanchor='top', x=0.475, y=0.97),
+            title=dict(text='<b>금리기간구조                   2020.12.31</b>', font_size=20, font_color='#323232', xanchor='left', yanchor='top', x=0.43, y=0.97),
             margin=dict(l=40, r=40, b=40, t=60),
             width=697,
             height=400,
