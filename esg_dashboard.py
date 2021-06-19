@@ -212,7 +212,7 @@ def main():
         ))
 
         fig.update_xaxes(
-            title=dict(text='<b>만기(년)</b>', font_color='#323232', font_size=18, standoff=0),
+            title=dict(text='<b>시점(년)</b>', font_color='#323232', font_size=18, standoff=0),
             tickfont=dict(size=15, family='Malgun Gothic', color='#323232'),
             tickformat='.0f',
             tickangle=0,
@@ -288,7 +288,7 @@ def main():
         ))
 
         fig2.update_xaxes(
-            title=dict(text='<b>만기(년)</b>', font_color='#323232', font_size=18, standoff=0),
+            title=dict(text='<b>시점(년)</b>', font_color='#323232', font_size=18, standoff=0),
             tickfont=dict(size=15, family='Malgun Gothic', color='#323232'),
             tickformat='.0f',
             tickangle=0,
