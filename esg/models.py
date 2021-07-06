@@ -144,7 +144,7 @@ class SmithWilson:
             bond = (-self.ltfr)**order*np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha, order)@self._zeta
             return bond
         
-    def spot(self, t, compounding='annually'):
+    def spot(self, t: float, compounding: str='annually'):
         if type(t) != np.ndarray:
             t = np.fmax(np.array([t]), 1e-6)
             P = np.exp(-self.ltfr*t)+self._wilson(t[:, None], self._u, self._alpha)@self._zeta
