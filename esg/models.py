@@ -665,8 +665,8 @@ class HullWhite:
         return value
 
     def theta(self, t: float) -> float:
-        # value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t)+0.5*(self.deriv_V_0t(t, 2)+self.alpha(t)*self.deriv_V_0t(t, 1))
-        value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t) # for test (사용 X)
+        value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t)+0.5*(self.deriv_V_0t(t, 2)+self.alpha(t)*self.deriv_V_0t(t, 1))
+        # value = self.curve.forward(t, 1)+self.alpha(t)*self.curve.forward(t) # for test (사용 X)
         return value
     
     def deriv_V_0t(self, t: float, order: int) -> float:
